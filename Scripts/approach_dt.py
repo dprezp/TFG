@@ -1,4 +1,8 @@
 import os
+import gc #importamos el recolector de basura
+
+from markdown_it.common.html_re import attribute
+
 os.environ["OMP_NUM_THREADS"] = "1" # export OMP_NUM_THREADS=1
 os.environ["OPENBLAS_NUM_THREADS"] = "1" # export OPENBLAS_NUM_THREADS=1
 os.environ["MKL_NUM_THREADS"] = "1" # export MKL_NUM_THREADS=1
@@ -61,10 +65,13 @@ operations = args.operations
 metric_id = args.metric
 
 # Definir datasets y sus atributos protegidos
-datasets = ["adult", "german", "compas", "bank", "meps19"]
-protected_attributes = [["sex", "race"], ["sex", "age"], ["race", "sex"], ["age"], ["race"]]  # Atributos protegidos por dataset
+datasets = ["adult", "german", "compas", "bank"]
+protected_attributes = [["sex", "race"], ["sex", "age"], ["race", "sex"], ["age"]]  # Atributos protegidos por dataset
+#dataset_used = "compas" #dataset de prueba
+#attr = "race" #atributo  de prueba
 
 
+#Comentar esto para una única ejecución y quitar identados
 for dataset_index, dataset_used in enumerate(datasets):
     for attr in protected_attributes[dataset_index]:
 
@@ -73,6 +80,12 @@ for dataset_index, dataset_used in enumerate(datasets):
 
         dataset_orig, privileged_groups,unprivileged_groups,optim_options = get_data(dataset_used, attr)
 
+        #------------
+        # Truncamos aleatoriamente a 100 datos
+        #sample_indices = np.random.choice(len(dataset_orig.features), 200, replace=False)
+        #dataset_orig.features = dataset_orig.features[sample_indices]
+        #dataset_orig.labels = dataset_orig.labels[sample_indices]
+        #------------
 
         np.random.seed(1234)
         dataset_orig_train, dataset_orig_test = dataset_orig.split([0.7], shuffle=True)
@@ -109,21 +122,32 @@ for dataset_index, dataset_used in enumerate(datasets):
         hist_first = [(valid_acc, valid_fair, prune_count)]
         hist_best = [(valid_acc, valid_fair, prune_count)]
 
-        #Primer operador del estado del arte
+        #Primer metodo del estado del arte
         start_time = time.time()
         get_state_of_art_algorithm(clf,2500, n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_art )
         elapsed_time = time.time() - start_time
-        write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred,operator[0],val_name, hist_art, n_nodes, dataset_used, elapsed_time)
+        write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred,operator[0],val_name, hist_art, n_nodes, dataset_used, elapsed_time,attr)
 
-        #Segundo operador, first improvement
+        #Borramos info del primer metodo para no sobrecargar:
+        del clf, hist_art
+        gc.collect()
+
+        #Segundo metodo, first improvement
         start_time = time.time()
         first_improvement(clf_first,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_first)
         elapsed_time = time.time() - start_time
-        write_metrics(clf_first, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],val_name, hist_first, n_nodes, dataset_used,elapsed_time)
+        write_metrics(clf_first, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],val_name, hist_first, n_nodes, dataset_used,elapsed_time,attr)
 
-        #Tercer operador, best improvement
+        #Borramos info del segundo metodo
+        del clf_first,hist_first
+        gc.collect()
+
+        #Tercer metodo, best improvement
         start_time = time.time()
         best_improvement(clf_best,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_best)
         elapsed_time = time.time() - start_time
-        write_metrics(clf_best, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[2],val_name, hist_best, n_nodes, dataset_used,elapsed_time)
-    
+        write_metrics(clf_best, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[2],val_name, hist_best, n_nodes, dataset_used,elapsed_time, attr)
+
+        # Borramos info del tercer metodo
+        del clf_best, hist_best
+        gc.collect()

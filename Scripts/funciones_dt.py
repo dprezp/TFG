@@ -1,3 +1,5 @@
+import gc
+
 import graphviz
 import os
 import sys
@@ -29,7 +31,7 @@ def prune(tree,interior):
     delete_right = prune_index(tree, tree.tree_.children_right[index])
     tree.tree_.children_left[index] = TREE_LEAF
     tree.tree_.children_right[index] = TREE_LEAF
-    return tree, (delete_left+delete_right)
+    return tree, index, (delete_left+delete_right)
 
 def prune_index(tree, index):
     delete_left = 0
@@ -44,7 +46,7 @@ def prune_index(tree, index):
 
 
 
-def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred, operator, val_name, hist, n_nodes, dataset_used, elapsed_time):
+def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred, operator, val_name, hist, n_nodes, dataset_used, elapsed_time,attr):
     train_acc, train_aod = get_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups,
                                        privileged_groups)
     test_acc, test_aod = get_metrics(clf, dataset_orig_test, dataset_orig_test_pred, unprivileged_groups,
@@ -70,20 +72,20 @@ def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged
 
 
     # Guardamos imagen del árbol generado
-    os.environ["PATH"] += os.pathsep + r'C:\\Program Files\\Graphviz\\bin'
+    #os.environ["PATH"] += os.pathsep + r'C:\\Program Files\\Graphviz\\bin'
     # Exportar el árbol de decisión a formato .dot
-    dot_data = export_graphviz(clf, out_file=None,
-                               feature_names=dataset_orig_train.feature_names,
-                               class_names=["Unprivileged", "Privileged"],
-                               filled=True, rounded=True,
-                               special_characters=False)
+    #dot_data = export_graphviz(clf, out_file=None,
+    #                           feature_names=dataset_orig_train.feature_names,
+    #                           class_names=["Unprivileged", "Privileged"],
+    #                           filled=True, rounded=True,
+    #                           special_characters=False)
 
     # Usar graphviz para convertir el archivo .dot a un gráfico
-    graph = graphviz.Source(dot_data)
+    #graph = graphviz.Source(dot_data)
 
     # Guardar el gráfico en formato PNG
-    name = os.path.join("Results\\Images", "best_decision_tee_{}_{}".format(operator,dataset_used))
-    graph.render(name, format="png")
+    #name = os.path.join("Results\\Images", "best_decision_tee_{}_{}_{}".format(operator,dataset_used,attr))
+    #graph.render(name, format="png")
 
 
 def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
@@ -98,13 +100,13 @@ def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig
                     x not in leafs]  # Coge el los interiores por cada operación, el nodo que ha sido prunned ya no es interior.
         if len(interior) <= 1:
             break
-        c, pruned = prune(c, interior)
+        c, pruned, valor = prune(c, interior)
 
         valid_acc, valid_aod = get_metrics(c, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,privileged_groups)
         valid_fair = valid_aod
         prev_valid_acc, prev_valid_fair, p = hist[-1]
         if valid_fair < prev_valid_fair and valid_acc > prev_valid_acc:
-            prune_count += pruned
+            prune_count += valor
             clf = c
             hist.append((valid_acc, valid_fair, prune_count))
 
@@ -113,28 +115,36 @@ def first_improvement (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivil
     prune_count = 0
     while (mejora):
         mejora = False
-        pruned = 0
         c = copy.deepcopy(clf)
         n_nodes = len(clf.tree_.children_left)
-
-        if n_nodes - prune_count <= 1:
-            break
         leafs = [i for i, x in enumerate(clf.tree_.children_left) if x == -1]
         interior = [x for x in range(n_nodes) if x not in leafs]  # Coge el los interiores por cada operación, el nodo que ha sido prunned ya no es interior.
-        if len(interior) <= 1:
-            break
 
-        while (len(interior) >=1):
-            c, pruned = prune(c, interior)
+        while True:
+
+            if n_nodes - prune_count <= 1:
+                break
+
+            if len(interior) <= 1:
+                break
+
+
+            c, pruned, valor = prune(c, interior)
+            if (pruned in interior):
+                interior.remove(pruned)
+                leafs.append(pruned)
             valid_acc, valid_aod = get_metrics(c, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,privileged_groups)
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
             if valid_fair < prev_valid_fair and valid_acc > prev_valid_acc:
-                prune_count += pruned
+                prune_count += valor
                 clf = c
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
                 break
+            gc.collect()
+        gc.collect()
+
 
 
 def best_improvement(clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist):
@@ -145,23 +155,29 @@ def best_improvement(clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileg
         pruned = 0
         c = copy.deepcopy(clf)
         n_nodes = len(clf.tree_.children_left)
-
-        if n_nodes - prune_count <= 1:
-            break
         leafs = [i for i, x in enumerate(clf.tree_.children_left) if x == -1]
-        interior = [x for x in range(n_nodes) if
-                    x not in leafs]  # Coge el los interiores por cada operación, el nodo que ha sido prunned ya no es interior.
-        if len(interior) <= 1:
-            break
+        interior = [x for x in range(n_nodes) if x not in leafs]  # Coge el los interiores por cada operación, el nodo que ha sido prunned ya no es interior.
 
-        while (len(interior) >= 1):
-            c, pruned = prune(c, interior)
+
+        while True:
+
+            if n_nodes - prune_count <= 1:
+                break
+            if len(interior) <= 1:
+                break
+
+            c, pruned, valor = prune(c, interior)
+            if(pruned in interior):
+                interior.remove(pruned)
+                leafs.append(pruned)
             valid_acc, valid_aod = get_metrics(c, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups)
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
             if valid_fair < prev_valid_fair and valid_acc > prev_valid_acc:
-                prune_count += pruned
+                prune_count += valor
                 clf = c
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
+            gc.collect()
+        gc.collect()
 
