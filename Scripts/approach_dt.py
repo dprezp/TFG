@@ -71,20 +71,23 @@ protected_attributes = [["sex", "race"], ["sex", "age"], ["race", "sex"], ["age"
 #attr = "race" #atributo  de prueba
 
 
+#Creamos el DF
+columnas = ["Tree Hash","Operator", "Dataset Used", "Attribute", "Train Accuracy", "Train AOD", "Test Accuracy", "Test AOD", "Validation Accuracy",
+            "Validation AOD","Num Nodes", "Prune Count", "Elapsed Time (s)"]
+metrics_df = pd.DataFrame(columns=columnas)
+
+
 #Comentar esto para una única ejecución y quitar identados
 for dataset_index, dataset_used in enumerate(datasets):
     for attr in protected_attributes[dataset_index]:
 
-        val_name = "final_{}_{}_{}_{}_{}.txt".format(dataset_used,attr,start,trials,metric_id)
-        val_name= os.path.join("Results",val_name)
-
         dataset_orig, privileged_groups,unprivileged_groups,optim_options = get_data(dataset_used, attr)
 
         #------------
-        # Truncamos aleatoriamente a 100 datos
-        #sample_indices = np.random.choice(len(dataset_orig.features), 200, replace=False)
-        #dataset_orig.features = dataset_orig.features[sample_indices]
-        #dataset_orig.labels = dataset_orig.labels[sample_indices]
+        # Truncamos aleatoriamente a 1000 datos
+        sample_indices = np.random.choice(len(dataset_orig.features), 100, replace=False)
+        dataset_orig.features = dataset_orig.features[sample_indices]
+        dataset_orig.labels = dataset_orig.labels[sample_indices]
         #------------
 
         np.random.seed(1234)
@@ -102,7 +105,9 @@ for dataset_index, dataset_used in enumerate(datasets):
         test_acc,test_aod = get_metrics(clf,dataset_orig_test,dataset_orig_test_pred,unprivileged_groups,privileged_groups)
         valid_acc,valid_aod = get_metrics(clf,dataset_orig_valid,dataset_orig_valid_pred,unprivileged_groups,privileged_groups)
         valid_fair = valid_aod
-
+        metrics_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,
+                      dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred,
+                      "No operator",  [[0]], 0, dataset_used, 0, attr,metrics_df)
 
         #Sacamos métricas de nuestro árbol
         n_nodes = len(clf.tree_.children_left)
@@ -124,9 +129,12 @@ for dataset_index, dataset_used in enumerate(datasets):
 
         #Primer metodo del estado del arte
         start_time = time.time()
-        get_state_of_art_algorithm(clf,2500, n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_art )
+        clf = get_state_of_art_algorithm(clf,2500, n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_art )
         elapsed_time = time.time() - start_time
-        write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred,operator[0],val_name, hist_art, n_nodes, dataset_used, elapsed_time,attr)
+        n_nodes = len(clf.tree_.children_left)
+        metrics_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
+                      dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred,operator[0],hist_art, n_nodes,
+                      dataset_used, elapsed_time,attr, metrics_df)
 
         #Borramos info del primer metodo para no sobrecargar:
         del clf, hist_art
@@ -134,9 +142,12 @@ for dataset_index, dataset_used in enumerate(datasets):
 
         #Segundo metodo, first improvement
         start_time = time.time()
-        first_improvement(clf_first,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_first)
+        clf_first = first_improvement(clf_first,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_first)
         elapsed_time = time.time() - start_time
-        write_metrics(clf_first, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],val_name, hist_first, n_nodes, dataset_used,elapsed_time,attr)
+        n_nodes = len(clf_first.tree_.children_left)
+        metrics_df = write_metrics(clf_first, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
+                      dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],hist_first, n_nodes,
+                      dataset_used,elapsed_time,attr, metrics_df)
 
         #Borramos info del segundo metodo
         del clf_first,hist_first
@@ -144,10 +155,17 @@ for dataset_index, dataset_used in enumerate(datasets):
 
         #Tercer metodo, best improvement
         start_time = time.time()
-        best_improvement(clf_best,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_best)
+        cfl_best = best_improvement(clf_best,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_best)
         elapsed_time = time.time() - start_time
-        write_metrics(clf_best, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[2],val_name, hist_best, n_nodes, dataset_used,elapsed_time, attr)
+        n_nodes = len(clf_best.tree_.children_left)
+        metrics_df = write_metrics(clf_best, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
+                      dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[2], hist_best, n_nodes,
+                      dataset_used,elapsed_time, attr, metrics_df)
 
         # Borramos info del tercer metodo
         del clf_best, hist_best
         gc.collect()
+
+#Guardamos el Excel
+excel_path = os.path.join("Results", "metrics_results.xlsx")
+metrics_df.to_excel(excel_path)
