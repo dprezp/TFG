@@ -133,13 +133,13 @@ def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig
         valid_acc, valid_aod = get_metrics(c, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,privileged_groups)
         valid_fair = valid_aod
         prev_valid_acc, prev_valid_fair, p = hist[-1]
-        if valid_fair < prev_valid_fair and valid_acc > prev_valid_acc:
+        if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc:
             prune_count += valor
             clf = copy.deepcopy(c)
             hist.append((valid_acc, valid_fair, prune_count))
     return clf
 
-def first_improvement (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
+def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
     mejora = True
     prune_count = 0
     while (mejora):
@@ -165,7 +165,7 @@ def first_improvement (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivil
             valid_acc, valid_aod = get_metrics(c, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,privileged_groups)
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
-            if valid_fair < prev_valid_fair and valid_acc > prev_valid_acc:
+            if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc:
                 prune_count += valor
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
@@ -177,7 +177,7 @@ def first_improvement (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivil
 
 
 
-def best_improvement (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
+def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
     mejora = True
     prune_count = 0
     while (mejora):
@@ -203,7 +203,7 @@ def best_improvement (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivile
             valid_acc, valid_aod = get_metrics(c, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,privileged_groups)
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
-            if valid_fair < prev_valid_fair and valid_acc > prev_valid_acc:
+            if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc:
                 prune_count += valor
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
