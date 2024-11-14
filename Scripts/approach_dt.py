@@ -110,7 +110,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         metrics_prune_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,
                       dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred,
                       "No operator",  [[0]], 0, dataset_used, 0, attr,metrics_prune_df)
-        metrics_relabeling_df = metrics_relabeling_df.append(metrics_prune_df, ignore_index=True)
+        metrics_relabeling_df = pd.concat([metrics_relabeling_df, metrics_prune_df], axis=0, ignore_index = True)
 
         #Sacamos métricas de nuestro árbol
         n_nodes = len(clf.tree_.children_left)
