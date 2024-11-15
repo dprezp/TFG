@@ -103,7 +103,7 @@ def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged
     dot_data = export_graphviz(clf, out_file=None,
                                feature_names=dataset_orig_train.feature_names,
                                class_names=["Unprivileged", "Privileged"],
-                               filled=True, rounded=True,
+                               filled=False, rounded=True,
                                special_characters=False)
 
     # Usar graphviz para convertir el archivo .dot a un gráfico
