@@ -87,9 +87,9 @@ for dataset_index, dataset_used in enumerate(datasets):
 
         #------------
         #Truncamos aleatoriamente a 1000 datos
-        sample_indices = np.random.choice(len(dataset_orig.features), 100, replace=False)
-        dataset_orig.features = dataset_orig.features[sample_indices]
-        dataset_orig.labels = dataset_orig.labels[sample_indices]
+        #sample_indices = np.random.choice(len(dataset_orig.features), 100, replace=False)
+        #dataset_orig.features = dataset_orig.features[sample_indices]
+        #dataset_orig.labels = dataset_orig.labels[sample_indices]
         #------------
 
         np.random.seed(1234)
