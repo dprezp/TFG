@@ -25,6 +25,8 @@ def relabel_leaf(clf, leaf_index, new_value):
 
 def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
     mejora = True
+    tolerance = 1e-6
+
     while (mejora):
         mejora = False
         c = copy.deepcopy(clf)
@@ -39,7 +41,7 @@ def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pre
             valid_acc, valid_aod = get_metrics(c, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,privileged_groups)
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
-            if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc:
+            if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc and abs(valid_fair - prev_valid_fair) > tolerance and abs(valid_acc - prev_valid_acc) > tolerance:
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, leaf))
                 mejora = True
@@ -55,6 +57,7 @@ def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pre
 
 def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
     mejora = True
+    tolerance = 1e-6
     while (mejora):
         mejora = False
         best_leaf = None
@@ -75,7 +78,7 @@ def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
 
-            if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc:
+            if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc and abs(valid_fair - prev_valid_fair) > tolerance and abs(valid_acc - prev_valid_acc) > tolerance:
                 if valid_acc > best[0] or (valid_acc == best[0] and valid_fair < best[1]):
                     best_leaf = leaf
                     best = (valid_acc, valid_fair)
