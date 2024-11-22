@@ -25,7 +25,7 @@ def relabel_leaf(clf, leaf_index, new_value):
 
 def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
     mejora = True
-    tolerance = 1e-6
+    tolerance = 1e-4
 
     while (mejora):
         mejora = False
@@ -57,7 +57,7 @@ def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pre
 
 def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
     mejora = True
-    tolerance = 1e-6
+    tolerance = 1e-4
     while (mejora):
         mejora = False
         best_leaf = None
