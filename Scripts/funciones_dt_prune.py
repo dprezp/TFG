@@ -111,7 +111,7 @@ def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged
 
     # Guardar el gráfico en formato PNG
     name = os.path.join("Results\\Images", "best_decision_tee_{}_{}_{}".format(operator,dataset_used,attr))
-    graph.render(name, format="png")
+    graph.render(name, format="pdf")
 
     return metrics_df
 
