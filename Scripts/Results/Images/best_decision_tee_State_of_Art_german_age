@@ -1,0 +1,5 @@
+digraph Tree {
+node [shape=box, style="rounded", color="black", fontname="helvetica"] ;
+edge [fontname="helvetica"] ;
+0 [label="gini = 0.432\nsamples = 700\nvalue = [479, 221]\nclass = Unprivileged"] ;
+}

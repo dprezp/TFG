@@ -144,13 +144,12 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
     prune_count = 0
     while (mejora):
         mejora = False
-        c = copy.deepcopy(clf)
         n_nodes = len(clf.tree_.children_left)
         leafs = [i for i, x in enumerate(clf.tree_.children_left) if x == -1]
         interior = [x for x in range(n_nodes) if x not in leafs]  # Coge el los interiores por cada operación, el nodo que ha sido prunned ya no es interior.
 
         while True:
-
+            c = copy.deepcopy(clf)
             if n_nodes - prune_count <= 1:
                 break
 
@@ -165,7 +164,7 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
             valid_acc, valid_aod = get_metrics(c, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,privileged_groups)
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
-            if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc:
+            if valid_fair < prev_valid_fair and valid_acc >= hist[0][0]:
                 prune_count += valor
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
@@ -182,13 +181,12 @@ def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unp
     prune_count = 0
     while (mejora):
         mejora = False
-        c = copy.deepcopy(clf)
         n_nodes = len(clf.tree_.children_left)
         leafs = [i for i, x in enumerate(clf.tree_.children_left) if x == -1]
         interior = [x for x in range(n_nodes) if x not in leafs]  # Coge el los interiores por cada operación, el nodo que ha sido prunned ya no es interior.
 
         while True:
-
+            c = copy.deepcopy(clf)
             if n_nodes - prune_count <= 1:
                 break
 
@@ -203,7 +201,7 @@ def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unp
             valid_acc, valid_aod = get_metrics(c, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,privileged_groups)
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
-            if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc:
+            if valid_fair < prev_valid_fair and valid_acc >= hist[0][0]:
                 prune_count += valor
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
