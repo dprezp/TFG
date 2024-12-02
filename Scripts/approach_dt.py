@@ -191,7 +191,7 @@ for dataset_index, dataset_used in enumerate(datasets):
                                          dataset_used, elapsed_time, attr, metrics_relabeling_df)
 
         # Borramos info del tercer metodo
-        del clf_best_prune, hist_best_prune,
+        del clf_best_prune, hist_best_prune, clf_best_relabeling, hist_best_relabeling
         gc.collect()
 
 #Guardamos el Excel
