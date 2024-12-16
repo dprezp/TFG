@@ -16,6 +16,21 @@ import random
 import hashlib
 from sklearn.tree._tree import TREE_LEAF
 
+def get_grafics(grafic_df, accuracy, operator):
+    print("he entrado a la función")
+    index_vacio = grafic_df[operator].first_valid_index()
+    if index_vacio is None:
+        index_vacio = 0
+    else:
+        index_vacio = grafic_df[operator].last_valid_index() +1
+
+    if index_vacio >= len(grafic_df):
+        grafic_df.loc[index_vacio] = [None]*len(grafic_df.columns)
+
+    grafic_df.loc[index_vacio, operator] = accuracy
+
+    return grafic_df
+
 
 def hash_decisiontree (clf):
     #Extraemos atributos del arbol
@@ -116,7 +131,7 @@ def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged
     return metrics_df
 
 
-def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
+def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df):
     for o in range(operations):
         pruned = 0
         c = copy.deepcopy(clf)
@@ -137,9 +152,10 @@ def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig
             prune_count += valor
             clf = copy.deepcopy(c)
             hist.append((valid_acc, valid_fair, prune_count))
-    return clf
+            grafic_df = get_grafics(grafic_df,valid_acc,"State of art")
+    return clf, grafic_df
 
-def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
+def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df):
     mejora = True
     prune_count = 0
     while (mejora):
@@ -169,14 +185,15 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
+                grafic_df = get_grafics(grafic_df,valid_acc,"First improvement pruning")
                 break
             gc.collect()
         gc.collect()
-    return clf
+    return clf, grafic_df
 
 
 
-def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist ):
+def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df ):
     mejora = True
     prune_count = 0
     while (mejora):
@@ -206,7 +223,8 @@ def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unp
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
+                grafic_df = get_grafics(grafic_df,valid_acc,"Best improvement pruning")
 
             gc.collect()
         gc.collect()
-    return clf
+    return clf, grafic_df
