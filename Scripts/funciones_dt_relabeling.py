@@ -65,8 +65,8 @@ def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred
         for leaf in leafs:
             c = copy.deepcopy(clf)
 
-            original_value = c.tree_.value[leaf].copy()
-            new_value = 1 -np.argmax(original_value)
+            original_value = c.tree_.value[leaf].ravel()
+            new_value = 1 if np.argmax(original_value) == 0 else 0
 
             c = relabel_leaf(c, leaf, new_value)
 
@@ -81,7 +81,8 @@ def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred
                 best_tree = copy.deepcopy(c)
                 grafic_df = get_grafics(grafic_df, valid_acc, "Best improvement relabel")
 
-            relabel_leaf(c, leaf, original_value)
+            new_class = np.argmax(original_value)
+            relabel_leaf(c, leaf, new_class)
             gc.collect()
         if best_leaf is not None:
             hist.append((best[0],best[1],best_leaf))
