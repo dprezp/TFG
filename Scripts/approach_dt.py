@@ -197,6 +197,10 @@ for dataset_index, dataset_used in enumerate(datasets):
         del clf_best_prune, hist_best_prune, clf_best_relabeling, hist_best_relabeling
         gc.collect()
 
+        excel_path = os.path.join("Results", "grafic_metrics_{}.xlsx".format(dataset_used))
+        grafic_df.to_excel(excel_path)
+        grafic_df.drop(grafic_df.index,inplace=True)
+
 #Guardamos el Excel
 excel_path = os.path.join("Results", "metrics_Prune_results.xlsx")
 metrics_prune_df.to_excel(excel_path)
@@ -204,5 +208,3 @@ metrics_prune_df.to_excel(excel_path)
 excel_path = os.path.join("Results", "metrics_Relabeling_results.xlsx")
 metrics_relabeling_df.to_excel(excel_path)
 
-excel_path = os.path.join("Results", "grafic_metrics.xlsx")
-grafic_df.to_excel(excel_path)
