@@ -1,9 +1,6 @@
 import gc
-
-import graphviz
 import os
 import sys
-
 import pandas as pd
 from aif360.metrics import ClassificationMetric
 from utility import get_data,write_to_file
