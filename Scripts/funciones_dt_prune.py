@@ -13,7 +13,7 @@ import random
 import hashlib
 from sklearn.tree._tree import TREE_LEAF
 
-def get_grafics(grafic_df, accuracy, operator):
+def get_grafics(grafic_df, fairness, operator):
     print("he entrado a la función")
     index_vacio = grafic_df[operator].first_valid_index()
     if index_vacio is None:
@@ -24,7 +24,7 @@ def get_grafics(grafic_df, accuracy, operator):
     if index_vacio >= len(grafic_df):
         grafic_df.loc[index_vacio] = [None]*len(grafic_df.columns)
 
-    grafic_df.loc[index_vacio, operator] = accuracy
+    grafic_df.loc[index_vacio, operator] = fairness
 
     return grafic_df
 
@@ -149,7 +149,7 @@ def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig
             prune_count += valor
             clf = copy.deepcopy(c)
             hist.append((valid_acc, valid_fair, prune_count))
-            grafic_df = get_grafics(grafic_df,valid_acc,"State of art")
+            grafic_df = get_grafics(grafic_df,valid_fair,"State of art")
     return clf, grafic_df
 
 def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df):
@@ -182,7 +182,7 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
-                grafic_df = get_grafics(grafic_df,valid_acc,"First improvement pruning")
+                grafic_df = get_grafics(grafic_df,valid_fair,"First improvement pruning")
                 break
             gc.collect()
         gc.collect()
@@ -220,7 +220,7 @@ def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unp
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
-                grafic_df = get_grafics(grafic_df,valid_acc,"Best improvement pruning")
+                grafic_df = get_grafics(grafic_df,valid_fair,"Best improvement pruning")
 
             gc.collect()
         gc.collect()
