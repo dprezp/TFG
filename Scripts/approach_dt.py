@@ -78,7 +78,7 @@ columnas = ["Tree Hash","Operator", "Dataset Used", "Attribute", "Train Accuracy
 metrics_prune_df = pd.DataFrame(columns=columnas)
 metrics_relabeling_df = pd.DataFrame(columns=columnas)
 
-columnas= ["State of art","First improvement pruning", "Best improvement pruning", "First improvement relabel", "Best improvement relabel"]
+columnas= ["DataSet", "Operator", "Fairness", "Time"]
 grafic_df = pd.DataFrame(columns=columnas)
 
 
@@ -141,7 +141,7 @@ for dataset_index, dataset_used in enumerate(datasets):
 
         #Primer metodo del estado del arte
         start_time = time.time()
-        clf, grafic_df = get_state_of_art_algorithm(clf,2500, n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_art,grafic_df )
+        clf, grafic_df = get_state_of_art_algorithm(clf,2500, n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_art,grafic_df, dataset_used )
         elapsed_time = time.time() - start_time
         n_nodes = len(clf.tree_.children_left)
         metrics_prune_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
@@ -154,7 +154,7 @@ for dataset_index, dataset_used in enumerate(datasets):
 
         #Pruning, first improvement
         start_time = time.time()
-        clf_first_prune, grafic_df = first_improvement_prune(clf_first_prune,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_first_prune,grafic_df)
+        clf_first_prune, grafic_df = first_improvement_prune(clf_first_prune,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_first_prune,grafic_df,dataset_used)
         elapsed_time = time.time() - start_time
         n_nodes = len(clf_first_prune.tree_.children_left)
         metrics_prune_df = write_metrics(clf_first_prune, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
@@ -164,7 +164,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         #Relabeling, first improvement
         start_time = time.time()
         clf_first_relabeling, grafic_df= first_improvement_relabeling(clf_first_relabeling, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,
-                                      privileged_groups, hist_first_relabeling,grafic_df)
+                                      privileged_groups, hist_first_relabeling,grafic_df, dataset_used)
         elapsed_time = time.time() - start_time
         metrics_relabeling_df = write_metrics(clf_first_relabeling, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups,
                                    privileged_groups, dataset_orig_test,dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],
@@ -177,7 +177,7 @@ for dataset_index, dataset_used in enumerate(datasets):
 
         #Pruning, best improvement
         start_time = time.time()
-        clf_best_prune,grafic_df = best_improvement_prune(clf_best_prune,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_best_prune,grafic_df)
+        clf_best_prune,grafic_df = best_improvement_prune(clf_best_prune,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_best_prune,grafic_df, dataset_used)
         elapsed_time = time.time() - start_time
         n_nodes = len(clf_best_prune.tree_.children_left)
         metrics_prune_df = write_metrics(clf_best_prune, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
@@ -187,7 +187,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         #Relabeling, best improvement
         # Tercer metodo, best improvement
         start_time = time.time()
-        clf_best_relabeling, grafic_df = best_improvement_relabeling(clf_best_relabeling, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_best_relabeling,grafic_df)
+        clf_best_relabeling, grafic_df = best_improvement_relabeling(clf_best_relabeling, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_best_relabeling,grafic_df, dataset_used)
         elapsed_time = time.time() - start_time
         metrics_relabeling_df = write_metrics(clf_best_relabeling, dataset_orig_train, dataset_orig_train_pred,unprivileged_groups, privileged_groups, dataset_orig_test,
                                          dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred,operator[2], hist_best_relabeling, n_nodes,
@@ -197,9 +197,6 @@ for dataset_index, dataset_used in enumerate(datasets):
         del clf_best_prune, hist_best_prune, clf_best_relabeling, hist_best_relabeling
         gc.collect()
 
-        excel_path = os.path.join("Results", "grafic_metrics_{}.xlsx".format(dataset_used))
-        grafic_df.to_excel(excel_path)
-        grafic_df.drop(grafic_df.index,inplace=True)
 
 #Guardamos el Excel
 excel_path = os.path.join("Results", "metrics_Prune_results.xlsx")
@@ -207,4 +204,7 @@ metrics_prune_df.to_excel(excel_path)
 
 excel_path = os.path.join("Results", "metrics_Relabeling_results.xlsx")
 metrics_relabeling_df.to_excel(excel_path)
+
+excel_path = os.path.join("Results", "grafic_metrics.xlsx")
+grafic_df.to_excel(excel_path)
 

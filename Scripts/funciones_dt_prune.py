@@ -3,28 +3,29 @@ import os
 import sys
 import pandas as pd
 from aif360.metrics import ClassificationMetric
+
+from Scripts.approach_dt import elapsed_time
 from utility import get_data,write_to_file
 from sklearn.tree import export_graphviz
 import graphviz
 from sklearn import tree
+import time
 import numpy as np
 import copy
 import random
 import hashlib
 from sklearn.tree._tree import TREE_LEAF
 
-def get_grafics(grafic_df, fairness, operator):
-    print("he entrado a la función")
-    index_vacio = grafic_df[operator].first_valid_index()
-    if index_vacio is None:
-        index_vacio = 0
-    else:
-        index_vacio = grafic_df[operator].last_valid_index() +1
+def get_grafics(grafic_df, fairness, operator, time, dataset):
 
-    if index_vacio >= len(grafic_df):
-        grafic_df.loc[index_vacio] = [None]*len(grafic_df.columns)
+    nueva_fila = {
+        "DataSet": dataset,
+        "Operator": operator,
+        "Fairness": fairness,
+        "Time": time
+    }
 
-    grafic_df.loc[index_vacio, operator] = fairness
+    grafic_df = grafic_df.append(nueva_fila)
 
     return grafic_df
 
@@ -128,7 +129,8 @@ def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged
     return metrics_df
 
 
-def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df):
+def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df,dataset_used):
+    start_time = time.time()
     for o in range(operations):
         pruned = 0
         c = copy.deepcopy(clf)
@@ -146,13 +148,15 @@ def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig
         valid_fair = valid_aod
         prev_valid_acc, prev_valid_fair, p = hist[-1]
         if valid_fair < prev_valid_fair and valid_acc >= prev_valid_acc:
+            elapsed_time = time.time() - start_time
             prune_count += valor
             clf = copy.deepcopy(c)
             hist.append((valid_acc, valid_fair, prune_count))
-            grafic_df = get_grafics(grafic_df,valid_fair,"State of art")
+            grafic_df = get_grafics(grafic_df,valid_fair,"State of art", elapsed_time,dataset_used )
     return clf, grafic_df
 
-def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df):
+def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df, dataset_used):
+    time_start = time.time()
     mejora = True
     prune_count = 0
     while (mejora):
@@ -178,11 +182,12 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
             if valid_fair < prev_valid_fair and valid_acc >= hist[0][0]:
+                elapsed_time = time.time() - time_start
                 prune_count += valor
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
-                grafic_df = get_grafics(grafic_df,valid_fair,"First improvement pruning")
+                grafic_df = get_grafics(grafic_df,valid_fair,"First improvement pruning", elapsed_time, dataset_used)
                 break
             gc.collect()
         gc.collect()
@@ -190,7 +195,8 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
 
 
 
-def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df ):
+def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df, dataset_used ):
+    start_time = time.time()
     mejora = True
     prune_count = 0
     while (mejora):
@@ -216,11 +222,12 @@ def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unp
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
             if valid_fair < prev_valid_fair and valid_acc >= hist[0][0]:
+                elapsed_time = time.time() - start_time
                 prune_count += valor
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
-                grafic_df = get_grafics(grafic_df,valid_fair,"Best improvement pruning")
+                grafic_df = get_grafics(grafic_df,valid_fair,"Best improvement pruning",elapsed_time, dataset_used)
 
             gc.collect()
         gc.collect()

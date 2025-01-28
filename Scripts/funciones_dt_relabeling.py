@@ -1,6 +1,9 @@
 import gc
 import numpy as np
 import copy
+import time
+
+from Scripts.approach_dt import elapsed_time
 from funciones_dt_prune import get_metrics, write_metrics, get_grafics
 
 
@@ -13,7 +16,8 @@ def relabel_leaf(clf, leaf_index, new_value):
 
     return clf
 
-def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df ):
+def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df, dataset_used):
+    start_time = time.time()
     mejora = True
     #tolerance = 1e-2
 
@@ -34,10 +38,11 @@ def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pre
             valid_fair = valid_aod
             prev_valid_acc, prev_valid_fair, p = hist[-1]
             if valid_fair < prev_valid_fair and valid_acc >= hist[0][0]:
+                elapsed_time = time.time() - start_time
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, leaf))
                 mejora = True
-                grafic_df = get_grafics(grafic_df, valid_acc, "First improvement relabel")
+                grafic_df = get_grafics(grafic_df, valid_acc, "First improvement relabel", elapsed_time, dataset_used)
                 break
             else: #Si no mejora revertimos
                 new_class = np.argmax(original_value)
@@ -49,7 +54,8 @@ def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pre
 
 
 
-def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df ):
+def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df, dataset_used):
+    start_time = time.time()
     mejora = True
     #tolerance = 1e-2
     while (mejora):
@@ -76,10 +82,11 @@ def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred
             prev_valid_acc, prev_valid_fair, p = hist[-1]
 
             if valid_fair < prev_valid_fair and valid_acc >= hist[0][0]:
+                elapsed_time = time.time() - start_time
                 best_leaf = leaf
                 best = (valid_acc, valid_fair)
                 best_tree = copy.deepcopy(c)
-                grafic_df = get_grafics(grafic_df, valid_acc, "Best improvement relabel")
+                grafic_df = get_grafics(grafic_df, valid_acc, "Best improvement relabel", elapsed_time, dataset_used)
 
             new_class = np.argmax(original_value)
             relabel_leaf(c, leaf, new_class)
