@@ -15,18 +15,7 @@ from sklearn.tree._tree import TREE_LEAF
 from funciones_df import *
 
 
-def hash_decisiontree (clf):
-    #Extraemos atributos del arbol
-    left_childrem = clf.tree_.children_left
-    right_childrem = clf.tree_.children_right
-    threshold = clf.tree_.threshold
-    feature = clf.tree_.feature
-    value = clf.tree_.value.flatten()
 
-    # los metemos en array y sacamos el hash SHA-256
-    data = np.concatenate([left_childrem, right_childrem,threshold,feature,value])
-    data_string = data.tobytes()
-    return hashlib.sha256(data_string).hexdigest()
 
 
 

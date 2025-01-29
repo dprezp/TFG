@@ -1,13 +1,17 @@
+import hashlib
 import os
 
 import pandas as pd
 from sklearn.tree import export_graphviz
 import graphviz
 
-from funciones_dt_prune import get_metrics, hash_decisiontree
+import funciones_dt_prune
+
 
 
 def get_grafics(data_tuple, fairness, operator, time, dataset):
+
+
     grafic_df, max_time = data_tuple
 
     nueva_fila = {
@@ -24,14 +28,27 @@ def get_grafics(data_tuple, fairness, operator, time, dataset):
 
     return grafic_df , max_time
 
+def hash_decisiontree (clf):
+    #Extraemos atributos del arbol
+    left_childrem = clf.tree_.children_left
+    right_childrem = clf.tree_.children_right
+    threshold = clf.tree_.threshold
+    feature = clf.tree_.feature
+    value = clf.tree_.value.flatten()
+
+    # los metemos en array y sacamos el hash SHA-256
+    data = np.concatenate([left_childrem, right_childrem,threshold,feature,value])
+    data_string = data.tobytes()
+    return hashlib.sha256(data_string).hexdigest()
+
 def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
                   dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred, operator,
                   hist, n_nodes, dataset_used, elapsed_time,attr, metrics_df):
 
 
-    train_acc, train_aod = get_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups)
-    test_acc, test_aod = get_metrics(clf, dataset_orig_test, dataset_orig_test_pred, unprivileged_groups, privileged_groups)
-    valid_acc, valid_aod = get_metrics(clf, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups)
+    train_acc, train_aod = funciones_dt_prune.get_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups)
+    test_acc, test_aod = funciones_dt_prune.get_metrics(clf, dataset_orig_test, dataset_orig_test_pred, unprivileged_groups, privileged_groups)
+    valid_acc, valid_aod = funciones_dt_prune.get_metrics(clf, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups)
 
     hash = hash_decisiontree(clf)
 
