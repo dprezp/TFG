@@ -2,6 +2,7 @@ import hashlib
 import os
 
 import pandas as pd
+import numpy as np
 from sklearn.tree import export_graphviz
 import graphviz
 
