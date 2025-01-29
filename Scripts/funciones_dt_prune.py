@@ -4,11 +4,7 @@ import sys
 import pandas as pd
 from aif360.metrics import ClassificationMetric
 
-from Scripts.approach_dt import elapsed_time
-from utility import get_data,write_to_file
-from sklearn.tree import export_graphviz
-import graphviz
-from sklearn import tree
+
 import time
 import numpy as np
 import copy
@@ -16,18 +12,7 @@ import random
 import hashlib
 from sklearn.tree._tree import TREE_LEAF
 
-def get_grafics(grafic_df, fairness, operator, time, dataset):
-
-    nueva_fila = {
-        "DataSet": dataset,
-        "Operator": operator,
-        "Fairness": fairness,
-        "Time": time
-    }
-
-    grafic_df = grafic_df.append(nueva_fila)
-
-    return grafic_df
+from funciones_df import *
 
 
 def hash_decisiontree (clf):
@@ -78,58 +63,8 @@ def prune_index(tree, index):
 
 
 
-def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
-                  dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred, operator,
-                  hist, n_nodes, dataset_used, elapsed_time,attr, metrics_df):
 
-
-    train_acc, train_aod = get_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups)
-    test_acc, test_aod = get_metrics(clf, dataset_orig_test, dataset_orig_test_pred, unprivileged_groups, privileged_groups)
-    valid_acc, valid_aod = get_metrics(clf, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups)
-
-    hash = hash_decisiontree(clf)
-
-    metrics_dict = {
-        "Tree Hash": hash,
-        "Operator": operator,
-        "Dataset Used": dataset_used,
-        "Attribute": attr,
-        "Train Accuracy": train_acc,
-        "Train AOD": train_aod,
-        "Test Accuracy": test_acc,
-        "Test AOD": test_aod,
-        "Validation Accuracy": valid_acc,
-        "Validation AOD": valid_aod,
-        "Num Nodes": n_nodes,
-        "Prune Count" : hist[-1][-1],
-        "Elapsed Time (s)": elapsed_time
-    }
-
-    metrics_row = pd.DataFrame([metrics_dict])
-    metrics_df = pd.concat([metrics_df, metrics_row], axis=0, ignore_index = True)
-
-
-
-    # Guardamos imagen del árbol generado
-    os.environ["PATH"] += os.pathsep + r'C:\\Program Files\\Graphviz\\bin'
-    # Exportar el árbol de decisión a formato .dot
-    dot_data = export_graphviz(clf, out_file=None,
-                               feature_names=dataset_orig_train.feature_names,
-                               class_names=["Unprivileged", "Privileged"],
-                               filled=False, rounded=True,
-                               special_characters=False)
-
-    # Usar graphviz para convertir el archivo .dot a un gráfico
-    graph = graphviz.Source(dot_data)
-
-    # Guardar el gráfico en formato PNG
-    name = os.path.join("Results\\Images", "best_decision_tee_{}_{}_{}".format(operator,dataset_used,attr))
-    graph.render(name, format="pdf")
-
-    return metrics_df
-
-
-def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df,dataset_used):
+def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple,dataset_used):
     start_time = time.time()
     for o in range(operations):
         pruned = 0
@@ -152,10 +87,10 @@ def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig
             prune_count += valor
             clf = copy.deepcopy(c)
             hist.append((valid_acc, valid_fair, prune_count))
-            grafic_df = get_grafics(grafic_df,valid_fair,"State of art", elapsed_time,dataset_used )
-    return clf, grafic_df
+            data_tuple = get_grafics(data_tuple,valid_fair,"State of art", elapsed_time,dataset_used )
+    return clf, data_tuple
 
-def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df, dataset_used):
+def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used):
     time_start = time.time()
     mejora = True
     prune_count = 0
@@ -187,15 +122,15 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
-                grafic_df = get_grafics(grafic_df,valid_fair,"First improvement pruning", elapsed_time, dataset_used)
+                data_tuple = get_grafics(data_tuple,valid_fair,"First improvement pruning", elapsed_time, dataset_used)
                 break
             gc.collect()
         gc.collect()
-    return clf, grafic_df
+    return clf, data_tuple
 
 
 
-def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, grafic_df, dataset_used ):
+def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used ):
     start_time = time.time()
     mejora = True
     prune_count = 0
@@ -227,8 +162,8 @@ def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unp
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
-                grafic_df = get_grafics(grafic_df,valid_fair,"Best improvement pruning",elapsed_time, dataset_used)
+                data_tuple = get_grafics(data_tuple,valid_fair,"Best improvement pruning",elapsed_time, dataset_used)
 
             gc.collect()
         gc.collect()
-    return clf, grafic_df
+    return clf, data_tuple
