@@ -83,7 +83,7 @@ def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred
             if valid_fair < prev_valid_fair and valid_acc >= hist[0][0]:
                 elapsed_time = time.time() - start_time
                 best_leaf = leaf
-                best = (valid_acc, valid_fair)
+                hist.append((valid_acc, valid_fair, leaf))
                 best_tree = copy.deepcopy(c)
                 data_tuple = get_grafics(data_tuple, valid_acc, "Best improvement relabel", elapsed_time, dataset_used)
 
@@ -92,7 +92,6 @@ def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred
             gc.collect()
 
         if best_leaf is not None:
-            hist.append((best[0],best[1],best_leaf))
             clf = copy.deepcopy(best_tree)
             mejora = True
 
