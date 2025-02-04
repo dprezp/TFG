@@ -97,7 +97,7 @@ def table_align (data_tuple):
     grafic_df, max_time = data_tuple
 
     #variable de tiempo
-    tiempo_maximo = max_time[0]
+    tiempo_maximo = int(max_time[0])
 
     #nuevo df para corregir filas
     aligned_df = pd.DataFrame(columns=grafic_df.columns)
