@@ -73,6 +73,7 @@ grafic_df = pd.DataFrame(columns=columnas)
 max_time = [-1]
 
 data_tuple = (grafic_df, max_time)
+valid_fair = None
 
 #Comentar esto para una única ejecución y quitar identados
 for dataset_index, dataset_used in enumerate(datasets):
@@ -82,9 +83,9 @@ for dataset_index, dataset_used in enumerate(datasets):
 
         #------------
         #Truncamos aleatoriamente a 1000 datos
-        #sample_indices = np.random.choice(len(dataset_orig.features), 1000, replace=False)
-        #dataset_orig.features = dataset_orig.features[sample_indices]
-        #dataset_orig.labels = dataset_orig.labels[sample_indices]
+        sample_indices = np.random.choice(len(dataset_orig.features), 400, replace=False)
+        dataset_orig.features = dataset_orig.features[sample_indices]
+        dataset_orig.labels = dataset_orig.labels[sample_indices]
         #------------
 
         np.random.seed(1234)
@@ -198,7 +199,8 @@ metrics_prune_df.to_excel(excel_path)
 excel_path = os.path.join("Results", "metrics_Relabeling_results.xlsx")
 metrics_relabeling_df.to_excel(excel_path)
 
-grafic_df = table_align(data_tuple)
+
+grafic_df = table_align(data_tuple, valid_fair)
 
 excel_path = os.path.join("Results", "grafic_metrics.xlsx")
 grafic_df.to_excel(excel_path)

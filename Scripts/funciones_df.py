@@ -1,5 +1,6 @@
 import hashlib
 import os
+from collections import defaultdict
 
 import pandas as pd
 import numpy as np
@@ -93,11 +94,15 @@ def write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged
     return metrics_df
 
 
-def table_align (data_tuple):
+def table_align (data_tuple, first_fairness):
     grafic_df, max_time = data_tuple
+
 
     #variable de tiempo
     tiempo_maximo = int(max_time[0])
+
+    #Ponemos los tiempos en enteros para poder iterarlos.
+    grafic_df['Time'] = grafic_df['Time'].round(0).astype(int)
 
     #nuevo df para corregir filas
     aligned_df = pd.DataFrame(columns=grafic_df.columns)
@@ -106,18 +111,19 @@ def table_align (data_tuple):
     for (dataset, operator), group in grafic_df.groupby(['DataSet', 'Operator']):
         #ordenamos por tiempo
         group = group.sort_values('Time').reset_index(drop=True)
+        # Añadimos un lastFairness inicial para los valores de 0 al primer momento que se mejora
+        last_fairness = first_fairness
 
-        #creamos el fairnesss para utilizarlo más tarde
-        fairness_dict = {}
-        last_fairness = 0
+        # creamos el fairnesss para utilizarlo más tarde
+        fairness_dict = defaultdict(list)
+        for t,f in zip(group['Time'], group['Fairness']):
+            fairness_dict[t].append(f)
 
-        for _, row in group.iterrows():
-            time = row['Time']
-            fairness_dict[time] = row['Fairness']
+
 
         for t in range(0, tiempo_maximo +1):
             if t in fairness_dict:
-                last_fairness = fairness_dict[t]
+                last_fairness = fairness_dict[t][0]
 
             aligned_df = pd.concat([aligned_df,pd.DataFrame([{
                 "DataSet": dataset,

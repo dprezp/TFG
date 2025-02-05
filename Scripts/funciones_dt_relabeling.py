@@ -4,7 +4,7 @@ import copy
 import time
 
 from funciones_dt_prune import get_metrics
-from funciones_df import get_grafics, write_metrics
+from funciones_df import get_grafics
 
 
 def relabel_leaf(clf, leaf_index, new_value):
@@ -18,7 +18,7 @@ def relabel_leaf(clf, leaf_index, new_value):
 def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used):
     start_time = time.time()
     mejora = True
-    tolerance = 1e-2
+    tolerance = 0.001
 
     while (mejora):
         mejora = False
@@ -41,7 +41,7 @@ def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pre
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, leaf))
                 mejora = True
-                data_tuple = get_grafics(data_tuple, valid_acc, "First improvement relabel", elapsed_time, dataset_used)
+                data_tuple = get_grafics(data_tuple, valid_fair, "First improvement relabel", elapsed_time, dataset_used)
                 break
             else: #Si no mejora revertimos
                 new_class = np.argmax(original_value)
@@ -56,11 +56,10 @@ def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pre
 def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used):
     start_time = time.time()
     mejora = True
-    tolerance = 1e-2
+    tolerance = 0.001
     while (mejora):
         mejora = False
         best_leaf = None
-        best = (0,float('inf'))
         best_tree = None
 
 
@@ -85,7 +84,7 @@ def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred
                 best_leaf = leaf
                 hist.append((valid_acc, valid_fair, leaf))
                 best_tree = copy.deepcopy(c)
-                data_tuple = get_grafics(data_tuple, valid_acc, "Best improvement relabel", elapsed_time, dataset_used)
+                data_tuple = get_grafics(data_tuple, valid_fair, "Best improvement relabel", elapsed_time, dataset_used)
 
             new_class = np.argmax(original_value)
             relabel_leaf(c, leaf, new_class)
