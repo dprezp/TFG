@@ -15,7 +15,7 @@ def relabel_leaf(clf, leaf_index, new_value):
 
     return clf
 
-def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used):
+def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used, atribute):
     start_time = time.time()
     mejora = True
     tolerance = 0.001
@@ -41,7 +41,7 @@ def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pre
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, leaf))
                 mejora = True
-                data_tuple = get_grafics(data_tuple, valid_fair, "First improvement relabel", elapsed_time, dataset_used)
+                data_tuple = get_grafics(data_tuple, valid_fair, "First improvement relabel", elapsed_time, dataset_used, atribute)
                 break
             else: #Si no mejora revertimos
                 new_class = np.argmax(original_value)
@@ -53,7 +53,7 @@ def first_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pre
 
 
 
-def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used):
+def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used, atribute):
     start_time = time.time()
     mejora = True
     tolerance = 0.001
@@ -84,7 +84,7 @@ def best_improvement_relabeling (clf,dataset_orig_valid, dataset_orig_valid_pred
                 best_leaf = leaf
                 hist.append((valid_acc, valid_fair, leaf))
                 best_tree = copy.deepcopy(c)
-                data_tuple = get_grafics(data_tuple, valid_fair, "Best improvement relabel", elapsed_time, dataset_used)
+                data_tuple = get_grafics(data_tuple, valid_fair, "Best improvement relabel", elapsed_time, dataset_used, atribute)
 
             new_class = np.argmax(original_value)
             relabel_leaf(c, leaf, new_class)

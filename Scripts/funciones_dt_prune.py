@@ -53,7 +53,7 @@ def prune_index(tree, index):
 
 
 
-def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple,dataset_used):
+def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple,dataset_used, atribute):
     start_time = time.time()
     for o in range(operations):
         pruned = 0
@@ -76,10 +76,10 @@ def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig
             prune_count += valor
             clf = copy.deepcopy(c)
             hist.append((valid_acc, valid_fair, prune_count))
-            data_tuple = get_grafics(data_tuple,valid_fair,"State of art", elapsed_time,dataset_used )
+            data_tuple = get_grafics(data_tuple,valid_fair,"State of art", elapsed_time,dataset_used, atribute )
     return clf, data_tuple
 
-def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used):
+def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used, atribute):
     time_start = time.time()
     mejora = True
     prune_count = 0
@@ -111,7 +111,7 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
-                data_tuple = get_grafics(data_tuple,valid_fair,"First improvement pruning", elapsed_time, dataset_used)
+                data_tuple = get_grafics(data_tuple,valid_fair,"First improvement pruning", elapsed_time, dataset_used, atribute)
                 break
             gc.collect()
         gc.collect()
@@ -119,7 +119,7 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
 
 
 
-def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used ):
+def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used, atribute ):
     start_time = time.time()
     mejora = True
     prune_count = 0
@@ -151,7 +151,7 @@ def best_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unp
                 clf = copy.deepcopy(c)
                 hist.append((valid_acc, valid_fair, prune_count))
                 mejora = True
-                data_tuple = get_grafics(data_tuple,valid_fair,"Best improvement pruning",elapsed_time, dataset_used)
+                data_tuple = get_grafics(data_tuple,valid_fair,"Best improvement pruning",elapsed_time, dataset_used, atribute)
 
             gc.collect()
         gc.collect()

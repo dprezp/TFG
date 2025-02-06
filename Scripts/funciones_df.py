@@ -11,13 +11,14 @@ import funciones_dt_prune
 
 
 
-def get_grafics(data_tuple, fairness, operator, time, dataset):
+def get_grafics(data_tuple, fairness, operator, time, dataset, atribute):
 
 
     grafic_df, max_time = data_tuple
 
     nueva_fila = {
         "DataSet": dataset,
+        "Atribute": atribute,
         "Operator": operator,
         "Fairness": fairness,
         "Time": time
@@ -108,11 +109,11 @@ def table_align (data_tuple, first_fairness):
     aligned_df = pd.DataFrame(columns=grafic_df.columns)
 
     #iteramos sobre el las combinaciones
-    for (dataset, operator), group in grafic_df.groupby(['DataSet', 'Operator']):
+    for (dataset,atribute, operator), group in grafic_df.groupby(['DataSet','Atribute', 'Operator']):
         #ordenamos por tiempo
         group = group.sort_values('Time').reset_index(drop=True)
         # Añadimos un lastFairness inicial para los valores de 0 al primer momento que se mejora
-        last_fairness = first_fairness
+        last_fairness = first_fairness.get((dataset,atribute),0)
 
         # creamos el fairnesss para utilizarlo más tarde
         fairness_dict = defaultdict(list)
@@ -127,6 +128,7 @@ def table_align (data_tuple, first_fairness):
 
             aligned_df = pd.concat([aligned_df,pd.DataFrame([{
                 "DataSet": dataset,
+                "Atribute": atribute,
                 "Operator": operator,
                 "Fairness": last_fairness,
                 "Time": t
