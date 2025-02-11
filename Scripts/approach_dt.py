@@ -1,13 +1,12 @@
 import os
 import gc #importamos el recolector de basura
 
-from markdown_it.common.html_re import attribute
-
 os.environ["OMP_NUM_THREADS"] = "1" # export OMP_NUM_THREADS=1
 os.environ["OPENBLAS_NUM_THREADS"] = "1" # export OPENBLAS_NUM_THREADS=1
 os.environ["MKL_NUM_THREADS"] = "1" # export MKL_NUM_THREADS=1
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1" # export VECLIB_MAXIMUM_THREADS=1
 os.environ["NUMEXPR_NUM_THREADS"] = "1" # export NUMEXPR_NUM_THREADS=1
+
 import sys
 sys.path.append("../")
 import warnings
@@ -15,22 +14,13 @@ warnings.filterwarnings('ignore')
 import numpy as np
 import pandas as pd
 import argparse
-import random
-import tqdm
-from aif360.metrics import BinaryLabelDatasetMetric
-from aif360.metrics import ClassificationMetric
-from sklearn.preprocessing import StandardScaler
-
-from aif360.datasets import AdultDataset, GermanDataset, CompasDataset
-from utility import get_data,write_to_file
-from sklearn.base import clone
+from utility import get_data
 from sklearn import tree
 import copy
-from sklearn.tree._tree import TREE_LEAF
-from sklearn.tree import export_graphviz
 import time
-import graphviz
-from funciones_dt import get_metrics, write_metrics, best_improvement, first_improvement, get_state_of_art_algorithm
+from funciones_dt_prune import get_metrics, best_improvement_prune, first_improvement_prune, get_state_of_art_algorithm
+from funciones_dt_relabeling import first_improvement_relabeling, best_improvement_relabeling
+from funciones_df import table_align, write_metrics
 
 
 parser = argparse.ArgumentParser()
@@ -71,11 +61,21 @@ protected_attributes = [["sex", "race"], ["sex", "age"], ["race", "sex"], ["age"
 #attr = "race" #atributo  de prueba
 
 
-#Creamos el DF
+#Creamos los DF
 columnas = ["Tree Hash","Operator", "Dataset Used", "Attribute", "Train Accuracy", "Train AOD", "Test Accuracy", "Test AOD", "Validation Accuracy",
             "Validation AOD","Num Nodes", "Prune Count", "Elapsed Time (s)"]
-metrics_df = pd.DataFrame(columns=columnas)
+metrics_prune_df = pd.DataFrame(columns=columnas)
+metrics_relabeling_df = pd.DataFrame(columns=columnas)
 
+columnas= ["DataSet","Atribute", "Operator", "Fairness", "Time"]
+grafic_df = pd.DataFrame(columns=columnas)
+
+max_time = [-1]
+
+data_tuple = (grafic_df, max_time)
+
+#Definimos diccionario de fairness para tener los valores iniciales de cada uno.
+first_fairness = {}
 
 #Comentar esto para una única ejecución y quitar identados
 for dataset_index, dataset_used in enumerate(datasets):
@@ -84,8 +84,8 @@ for dataset_index, dataset_used in enumerate(datasets):
         dataset_orig, privileged_groups,unprivileged_groups,optim_options = get_data(dataset_used, attr)
 
         #------------
-        # Truncamos aleatoriamente a 1000 datos
-        #sample_indices = np.random.choice(len(dataset_orig.features), 100, replace=False)
+        #Truncamos aleatoriamente a 1000 datos
+        #sample_indices = np.random.choice(len(dataset_orig.features), 400, replace=False)
         #dataset_orig.features = dataset_orig.features[sample_indices]
         #dataset_orig.labels = dataset_orig.labels[sample_indices]
         #------------
@@ -105,9 +105,17 @@ for dataset_index, dataset_used in enumerate(datasets):
         test_acc,test_aod = get_metrics(clf,dataset_orig_test,dataset_orig_test_pred,unprivileged_groups,privileged_groups)
         valid_acc,valid_aod = get_metrics(clf,dataset_orig_valid,dataset_orig_valid_pred,unprivileged_groups,privileged_groups)
         valid_fair = valid_aod
-        metrics_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,
+        metrics_prune_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,
                       dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred,
-                      "No operator",  [[0]], 0, dataset_used, 0, attr,metrics_df)
+                      "No operator",  [[0]], 0, dataset_used, 0, attr,metrics_prune_df)
+        metrics_relabeling_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups,
+                                         privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid,
+                                         dataset_orig_valid_pred,"No operator", [[0]], 0, dataset_used, 0, attr, metrics_relabeling_df)
+
+
+        #Guardamos el first fairness en el diccionario
+        first_fairness[(dataset_used,attr)] = valid_fair
+
 
         #Sacamos métricas de nuestro árbol
         n_nodes = len(clf.tree_.children_left)
@@ -116,56 +124,98 @@ for dataset_index, dataset_used in enumerate(datasets):
         prune_count = 0
 
         #copias de arboles para cada operador
-        clf_first = copy.deepcopy(clf)
-        clf_best = copy.deepcopy(clf)
+        clf_first_prune = copy.deepcopy(clf)
+        clf_best_prune = copy.deepcopy(clf)
+        clf_first_relabeling = copy.deepcopy(clf)
+        clf_best_relabeling = copy.deepcopy(clf)
 
         #Array de operator para escribirlo en el documento:
         operator=["State_of_Art", "First_improvement","Best_improvement"]
 
         #array de históricos para cada operador
         hist_art = [(valid_acc,valid_fair,prune_count)]
-        hist_first = [(valid_acc, valid_fair, prune_count)]
-        hist_best = [(valid_acc, valid_fair, prune_count)]
+        hist_first_prune = [(valid_acc, valid_fair, prune_count)]
+        hist_best_prune = [(valid_acc, valid_fair, prune_count)]
+        hist_first_relabeling = [(valid_acc, valid_fair, prune_count)]
+        hist_best_relabeling = [(valid_acc, valid_fair, prune_count)]
 
         #Primer metodo del estado del arte
         start_time = time.time()
-        clf = get_state_of_art_algorithm(clf,2500, n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_art )
+        clf, data_tuple = get_state_of_art_algorithm(clf,2500, n_nodes, prune_count,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,
+                                                     privileged_groups, hist_art,data_tuple, dataset_used, attr)
         elapsed_time = time.time() - start_time
         n_nodes = len(clf.tree_.children_left)
-        metrics_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
+        metrics_prune_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
                       dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred,operator[0],hist_art, n_nodes,
-                      dataset_used, elapsed_time,attr, metrics_df)
+                      dataset_used, elapsed_time,attr, metrics_prune_df)
 
         #Borramos info del primer metodo para no sobrecargar:
         del clf, hist_art
         gc.collect()
 
-        #Segundo metodo, first improvement
+        #Pruning, first improvement
         start_time = time.time()
-        clf_first = first_improvement(clf_first,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_first)
+        clf_first_prune, data_tuple = first_improvement_prune(clf_first_prune,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,
+                                                              privileged_groups, hist_first_prune,data_tuple,dataset_used, attr)
         elapsed_time = time.time() - start_time
-        n_nodes = len(clf_first.tree_.children_left)
-        metrics_df = write_metrics(clf_first, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
-                      dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],hist_first, n_nodes,
-                      dataset_used,elapsed_time,attr, metrics_df)
+        n_nodes = len(clf_first_prune.tree_.children_left)
+        metrics_prune_df = write_metrics(clf_first_prune, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
+                      dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],hist_first_prune, n_nodes,
+                      dataset_used,elapsed_time,attr, metrics_prune_df)
+
+        #Relabeling, first improvement
+        start_time = time.time()
+        clf_first_relabeling, data_tuple= first_improvement_relabeling(clf_first_relabeling, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,
+                                      privileged_groups, hist_first_relabeling,data_tuple, dataset_used, attr)
+        elapsed_time = time.time() - start_time
+        metrics_relabeling_df = write_metrics(clf_first_relabeling, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups,
+                                   privileged_groups, dataset_orig_test,dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],
+                                   hist_first_relabeling, n_nodes,dataset_used, elapsed_time, attr, metrics_relabeling_df)
+
 
         #Borramos info del segundo metodo
-        del clf_first,hist_first
+        del clf_first_relabeling,hist_first_relabeling,clf_first_prune,hist_first_prune
         gc.collect()
 
-        #Tercer metodo, best improvement
+        #Pruning, best improvement
+
         start_time = time.time()
-        cfl_best = best_improvement(clf_best,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist_best)
+        clf_best_prune,data_tuple = best_improvement_prune(clf_best_prune,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,
+                                                           privileged_groups, hist_best_prune,data_tuple, dataset_used,attr)
         elapsed_time = time.time() - start_time
-        n_nodes = len(clf_best.tree_.children_left)
-        metrics_df = write_metrics(clf_best, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
-                      dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[2], hist_best, n_nodes,
-                      dataset_used,elapsed_time, attr, metrics_df)
+        n_nodes = len(clf_best_prune.tree_.children_left)
+        metrics_prune_df = write_metrics(clf_best_prune, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
+                      dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[2], hist_best_prune, n_nodes,
+                      dataset_used,elapsed_time, attr, metrics_prune_df)
+
+        #Relabeling, best improvement
+
+        start_time = time.time()
+        clf_best_relabeling, data_tuple = best_improvement_relabeling(clf_best_relabeling, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,
+                                                                      privileged_groups, hist_best_relabeling,data_tuple, dataset_used,attr)
+        elapsed_time = time.time() - start_time
+        metrics_relabeling_df = write_metrics(clf_best_relabeling, dataset_orig_train, dataset_orig_train_pred,unprivileged_groups, privileged_groups, dataset_orig_test,
+                                         dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred,operator[2], hist_best_relabeling, n_nodes,
+                                         dataset_used, elapsed_time, attr, metrics_relabeling_df)
 
         # Borramos info del tercer metodo
-        del clf_best, hist_best
+        del clf_best_prune, hist_best_prune, clf_best_relabeling, hist_best_relabeling
         gc.collect()
 
+
 #Guardamos el Excel
-excel_path = os.path.join("Results", "metrics_results.xlsx")
-metrics_df.to_excel(excel_path)
+excel_path = os.path.join("Results", "metrics_Prune_results.xlsx")
+metrics_prune_df.to_excel(excel_path)
+
+excel_path = os.path.join("Results", "metrics_Relabeling_results.xlsx")
+metrics_relabeling_df.to_excel(excel_path)
+
+prueba_df, invalid = data_tuple
+excel_path = os.path.join("Results", "prueba.xlsx")
+prueba_df.to_excel(excel_path)
+
+grafic_df = table_align(data_tuple, first_fairness)
+
+excel_path = os.path.join("Results", "grafic_metrics.xlsx")
+grafic_df.to_excel(excel_path)
+
