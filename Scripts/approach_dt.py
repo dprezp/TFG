@@ -62,7 +62,7 @@ protected_attributes = [["sex", "race"], ["sex", "age"], ["race", "sex"], ["age"
 
 
 #Creamos los DF
-columnas = ["Tree Hash","Operator", "Dataset Used", "Attribute", "Train Accuracy", "Train AOD", "Test Accuracy", "Test AOD", "Validation Accuracy",
+columnas = ["Tree Hash","Operator", "Dataset Used","Lenght Dataset" ,"Attribute", "Train Accuracy", "Train AOD", "Test Accuracy", "Test AOD", "Validation Accuracy",
             "Validation AOD","Num Nodes", "Prune Count", "Elapsed Time (s)"]
 metrics_prune_df = pd.DataFrame(columns=columnas)
 metrics_relabeling_df = pd.DataFrame(columns=columnas)
@@ -82,10 +82,11 @@ for dataset_index, dataset_used in enumerate(datasets):
     for attr in protected_attributes[dataset_index]:
 
         dataset_orig, privileged_groups,unprivileged_groups,optim_options = get_data(dataset_used, attr)
+        lenght_data = dataset_orig.features.shape[0]
 
         #------------
         #Truncamos aleatoriamente a 1000 datos
-        #sample_indices = np.random.choice(len(dataset_orig.features), 400, replace=False)
+        #sample_indices = np.random.choice(len(dataset_orig.features), 100, replace=False)
         #dataset_orig.features = dataset_orig.features[sample_indices]
         #dataset_orig.labels = dataset_orig.labels[sample_indices]
         #------------
@@ -105,12 +106,13 @@ for dataset_index, dataset_used in enumerate(datasets):
         test_acc,test_aod = get_metrics(clf,dataset_orig_test,dataset_orig_test_pred,unprivileged_groups,privileged_groups)
         valid_acc,valid_aod = get_metrics(clf,dataset_orig_valid,dataset_orig_valid_pred,unprivileged_groups,privileged_groups)
         valid_fair = valid_aod
+
         metrics_prune_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,
                       dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred,
-                      "No operator",  [[0]], 0, dataset_used, 0, attr,metrics_prune_df)
+                      "No operator",  [[0]], 0, dataset_used, 0, attr,metrics_prune_df, lenght_data)
         metrics_relabeling_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups,
                                          privileged_groups,dataset_orig_test, dataset_orig_test_pred, dataset_orig_valid,
-                                         dataset_orig_valid_pred,"No operator", [[0]], 0, dataset_used, 0, attr, metrics_relabeling_df)
+                                         dataset_orig_valid_pred,"No operator", [[0]], 0, dataset_used, 0, attr, metrics_relabeling_df,lenght_data)
 
 
         #Guardamos el first fairness en el diccionario
@@ -147,7 +149,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         n_nodes = len(clf.tree_.children_left)
         metrics_prune_df = write_metrics(clf, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
                       dataset_orig_test_pred, dataset_orig_valid,dataset_orig_valid_pred,operator[0],hist_art, n_nodes,
-                      dataset_used, elapsed_time,attr, metrics_prune_df)
+                      dataset_used, elapsed_time,attr, metrics_prune_df,lenght_data)
 
         #Borramos info del primer metodo para no sobrecargar:
         del clf, hist_art
@@ -161,7 +163,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         n_nodes = len(clf_first_prune.tree_.children_left)
         metrics_prune_df = write_metrics(clf_first_prune, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
                       dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],hist_first_prune, n_nodes,
-                      dataset_used,elapsed_time,attr, metrics_prune_df)
+                      dataset_used,elapsed_time,attr, metrics_prune_df,lenght_data)
 
         #Relabeling, first improvement
         start_time = time.time()
@@ -170,7 +172,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         elapsed_time = time.time() - start_time
         metrics_relabeling_df = write_metrics(clf_first_relabeling, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups,
                                    privileged_groups, dataset_orig_test,dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],
-                                   hist_first_relabeling, n_nodes,dataset_used, elapsed_time, attr, metrics_relabeling_df)
+                                   hist_first_relabeling, n_nodes,dataset_used, elapsed_time, attr, metrics_relabeling_df,lenght_data)
 
 
         #Borramos info del segundo metodo
@@ -186,7 +188,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         n_nodes = len(clf_best_prune.tree_.children_left)
         metrics_prune_df = write_metrics(clf_best_prune, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
                       dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[2], hist_best_prune, n_nodes,
-                      dataset_used,elapsed_time, attr, metrics_prune_df)
+                      dataset_used,elapsed_time, attr, metrics_prune_df,lenght_data)
 
         #Relabeling, best improvement
 
@@ -196,7 +198,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         elapsed_time = time.time() - start_time
         metrics_relabeling_df = write_metrics(clf_best_relabeling, dataset_orig_train, dataset_orig_train_pred,unprivileged_groups, privileged_groups, dataset_orig_test,
                                          dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred,operator[2], hist_best_relabeling, n_nodes,
-                                         dataset_used, elapsed_time, attr, metrics_relabeling_df)
+                                         dataset_used, elapsed_time, attr, metrics_relabeling_df,lenght_data)
 
         # Borramos info del tercer metodo
         del clf_best_prune, hist_best_prune, clf_best_relabeling, hist_best_relabeling
@@ -216,6 +218,11 @@ prueba_df.to_excel(excel_path)
 
 grafic_df = table_align(data_tuple, first_fairness)
 
+csv_path = os.path.join("Results", "backup.csv")
+grafic_df.to_csv(excel_path, index=False)
+
 excel_path = os.path.join("Results", "grafic_metrics.xlsx")
 grafic_df.to_excel(excel_path)
+
+
 
