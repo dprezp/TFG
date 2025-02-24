@@ -31,11 +31,11 @@ parser.add_argument("-p", "--protected", type=str, default="race",
 
 parser.add_argument("-s", "--start", type=int, default=0,
                     help="Start")
-parser.add_argument("-e", "--end", type=int, default=1,
+parser.add_argument("-e", "--end", type=int, default=50,
                     help="End")
-parser.add_argument("-t", "--trials", type=int, default=1,
+parser.add_argument("-t", "--trials", type=int, default=50,
                     help="Trials")
-parser.add_argument("-o", "--operations", type=int, default=10,
+parser.add_argument("-o", "--operations", type=int, default=2500,
                     help="Operations")
 parser.add_argument("-m", "--metric", type=int, default=0,
                     help="metric")
@@ -158,7 +158,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         #Pruning, first improvement
         start_time = time.time()
         clf_first_prune, data_tuple = first_improvement_prune(clf_first_prune,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,
-                                                              privileged_groups, hist_first_prune,data_tuple,dataset_used, attr)
+                                                              privileged_groups, hist_first_prune,data_tuple,dataset_used, attr,0,None)
         elapsed_time = time.time() - start_time
         n_nodes = len(clf_first_prune.tree_.children_left)
         metrics_prune_df = write_metrics(clf_first_prune, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups, privileged_groups,dataset_orig_test,
@@ -168,7 +168,7 @@ for dataset_index, dataset_used in enumerate(datasets):
         #Relabeling, first improvement
         start_time = time.time()
         clf_first_relabeling, data_tuple= first_improvement_relabeling(clf_first_relabeling, dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,
-                                      privileged_groups, hist_first_relabeling,data_tuple, dataset_used, attr)
+                                      privileged_groups, hist_first_relabeling,data_tuple, dataset_used, attr,0,None)
         elapsed_time = time.time() - start_time
         metrics_relabeling_df = write_metrics(clf_first_relabeling, dataset_orig_train, dataset_orig_train_pred, unprivileged_groups,
                                    privileged_groups, dataset_orig_test,dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred, operator[1],

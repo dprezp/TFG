@@ -79,8 +79,11 @@ def get_state_of_art_algorithm (clf,operations,n_nodes, prune_count,dataset_orig
             data_tuple = get_grafics(data_tuple,valid_fair,"State of art", elapsed_time,dataset_used, atribute )
     return clf, data_tuple
 
-def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used, atribute):
-    time_start = time.time()
+def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups, privileged_groups, hist, data_tuple, dataset_used, atribute,vnd,global_time):
+    if(vnd==1):
+        time_start = global_time
+    else:
+        time_start = time.time()
     mejora = True
     prune_count = 0
     while (mejora):
@@ -115,6 +118,7 @@ def first_improvement_prune (clf,dataset_orig_valid, dataset_orig_valid_pred, un
                 break
             gc.collect()
         gc.collect()
+
     return clf, data_tuple
 
 
