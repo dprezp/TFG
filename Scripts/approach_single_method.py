@@ -5,6 +5,7 @@ import time
 import numpy as np
 import pandas as pd
 
+from Scripts.approach_dt import prune_count
 from utility import get_data
 from sklearn import tree
 from funciones_dt_prune import (
@@ -43,8 +44,8 @@ def run_state_of_art():
         for attr in protected_attributes[dataset_index]:
             clf, train, test, valid, train_pred, test_pred, valid_pred, unpriv, priv, length = train_base_tree(dataset_used, attr)
             operator = "State_of_Art"
-            hist = []
             prune_count = 0
+            hist = [(valid,valid,prune_count)]
             n_nodes = len(clf.tree_.children_left)
             start = time.time()
             clf, data_tuple = get_state_of_art_algorithm(clf, 2500, n_nodes, prune_count, valid, valid_pred, unpriv, priv, hist, data_tuple, dataset_used, attr)
@@ -68,7 +69,8 @@ def run_first_improvement_prune():
         for attr in protected_attributes[dataset_index]:
             clf, train, test, valid, train_pred, test_pred, valid_pred, unpriv, priv, length = train_base_tree(dataset_used, attr)
             operator = "First_improvement"
-            hist = []
+            prune_count = 0
+            hist = [(valid,valid,prune_count)]
             start = time.time()
             clf, data_tuple = first_improvement_prune(clf, valid, valid_pred, unpriv, priv, hist, data_tuple, dataset_used, attr, 0, None)
             elapsed = time.time() - start
@@ -91,7 +93,8 @@ def run_best_improvement_prune():
         for attr in protected_attributes[dataset_index]:
             clf, train, test, valid, train_pred, test_pred, valid_pred, unpriv, priv, length = train_base_tree(dataset_used, attr)
             operator = "Best_improvement"
-            hist = []
+            prune_count = 0
+            hist = [(valid, valid, prune_count)]
             start = time.time()
             clf, data_tuple = best_improvement_prune(clf, valid, valid_pred, unpriv, priv, hist, data_tuple, dataset_used, attr)
             elapsed = time.time() - start
@@ -114,7 +117,8 @@ def run_first_improvement_relabeling():
         for attr in protected_attributes[dataset_index]:
             clf, train, test, valid, train_pred, test_pred, valid_pred, unpriv, priv, length = train_base_tree(dataset_used, attr)
             operator = "First_improvement"
-            hist = []
+            prune_count = 0
+            hist = [(valid, valid, prune_count)]
             start = time.time()
             clf, data_tuple = first_improvement_relabeling(clf, valid, valid_pred, unpriv, priv, hist, data_tuple, dataset_used, attr, 0, None)
             elapsed = time.time() - start
@@ -137,7 +141,8 @@ def run_best_improvement_relabeling():
         for attr in protected_attributes[dataset_index]:
             clf, train, test, valid, train_pred, test_pred, valid_pred, unpriv, priv, length = train_base_tree(dataset_used, attr)
             operator = "Best_improvement"
-            hist = []
+            prune_count = 0
+            hist = [(valid, valid, prune_count)]
             start = time.time()
             clf, data_tuple = best_improvement_relabeling(clf, valid, valid_pred, unpriv, priv, hist, data_tuple, dataset_used, attr)
             elapsed = time.time() - start
