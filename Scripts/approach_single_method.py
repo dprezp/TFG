@@ -1,8 +1,8 @@
 import os
 import gc
+import copy
 import argparse
 import time
-import copy
 import numpy as np
 import pandas as pd
 from sklearn import tree
@@ -30,91 +30,138 @@ parser.add_argument("-m", "--method", type=str, required=True,
                     help="Method to execute")
 args = parser.parse_args()
 
+# =============================================================================
+# ----------------------- CÓDIGO COPIADO DE approach_dt.py --------------------
+# =============================================================================
+
 # Definir datasets y atributos protegidos
-DATASETS = {
-    "adult": ["sex", "race"],
-    "german": ["sex", "age"],
-    "compas": ["race", "sex"],
-    "bank": ["age"]
-}
+datasets = ["adult", "german", "compas", "bank"]
+protected_attributes = [["sex", "race"], ["sex", "age"], ["race", "sex"], ["age"]]
 
-METHODS = {
-    "state_of_art": get_state_of_art_algorithm,
-    "first_prune": first_improvement_prune,
-    "best_prune": best_improvement_prune,
-    "first_relabel": first_improvement_relabeling,
-    "best_relabel": best_improvement_relabeling
-}
+# Inicializar DataFrames (igual que en approach_dt.py)
+metrics_prune_df = pd.DataFrame(columns=[
+    "Tree Hash", "Operator", "Dataset Used", "Lenght Dataset", "Attribute",
+    "Train Accuracy", "Train AOD", "Test Accuracy", "Test AOD",
+    "Validation Accuracy", "Validation AOD", "Num Nodes", "Prune Count", "Elapsed Time (s)"
+])
+metrics_relabeling_df = pd.DataFrame(columns=[
+    "Tree Hash", "Operator", "Dataset Used", "Lenght Dataset", "Attribute",
+    "Train Accuracy", "Train AOD", "Test Accuracy", "Test AOD",
+    "Validation Accuracy", "Validation AOD", "Num Nodes", "Prune Count", "Elapsed Time (s)"
+])
+
+grafic_df = pd.DataFrame(columns=["DataSet", "Atribute", "Operator", "Fairness", "Time"])
+max_time = [-1]
+data_tuple = (grafic_df, max_time)
+first_fairness = {}
 
 
-def execute_method(dataset_used, attr, method):
-    # Cargar datos
+# =============================================================================
+# ----------------------- FUNCIÓN MODIFICADA CON SELECCIÓN DE MÉTODO ----------
+# =============================================================================
+
+def process_dataset(dataset_index, dataset_used, attr):
+    global metrics_prune_df, metrics_relabeling_df, data_tuple
+
+    # Código original de approach_dt.py
     dataset_orig, privileged_groups, unprivileged_groups, _ = get_data(dataset_used, attr)
     length_data = dataset_orig.features.shape[0]
 
-    # Split datos
     np.random.seed(1234)
-    train, test = dataset_orig.split([0.7], shuffle=True)
-    test, valid = test.split([0.5], shuffle=True)
+    dataset_orig_train, dataset_orig_test = dataset_orig.split([0.7], shuffle=True)
+    dataset_orig_test, dataset_orig_valid = dataset_orig_test.split([0.5], shuffle=True)
 
-    # Inicializar DataFrames
-    metrics_df = pd.DataFrame(columns=[
-        "Tree Hash", "Operator", "Dataset Used", "Lenght Dataset", "Attribute",
-        "Train Accuracy", "Train AOD", "Test Accuracy", "Test AOD",
-        "Validation Accuracy", "Validation AOD", "Num Nodes", "Prune Count", "Elapsed Time (s)"
-    ])
+    # Copias exactas como en approach_dt.py
+    dataset_orig_test_pred = dataset_orig_test.copy(deepcopy=True)
+    dataset_orig_train_pred = dataset_orig_train.copy(deepcopy=True)
+    dataset_orig_valid_pred = dataset_orig_valid.copy(deepcopy=True)
 
-    grafic_df = pd.DataFrame(columns=["DataSet", "Atribute", "Operator", "Fairness", "Time"])
-    max_time = [-1]
-    data_tuple = (grafic_df, max_time)
-
-    # Entrenar árbol base
     clf = tree.DecisionTreeClassifier(random_state=1)
-    clf.fit(train.features, train.labels)
+    clf.fit(dataset_orig_train.features, dataset_orig_train.labels)
 
-    # Configurar histórico inicial
-    hist = [(0, 0, 0)]  # Histórico dummy
+    # Histórico inicial REAL (idéntico a approach_dt.py)
+    valid_acc, valid_aod = get_metrics(clf, dataset_orig_valid, dataset_orig_valid_pred,
+                                       unprivileged_groups, privileged_groups)
+    valid_fair = valid_aod
+    prune_count = 0
+    hist = [(valid_acc, valid_fair, prune_count)]
 
-    start_time = time.time()
+    # =========================================================================
+    # ----------------------- LÓGICA DE SELECCIÓN DE MÉTODO -------------------
+    # =========================================================================
 
-    # Ejecutar método seleccionado
-    if method == "all":
-        for m in METHODS.values():
-            current_clf = copy.deepcopy(clf)
-            current_clf, _ = m(
-                current_clf, valid, valid,
-                unprivileged_groups, privileged_groups,
-                hist, data_tuple, dataset_used, attr
-            )
+    operators = {
+        "state_of_art": (get_state_of_art_algorithm, "prune"),
+        "first_prune": (first_improvement_prune, "prune"),
+        "best_prune": (best_improvement_prune, "prune"),
+        "first_relabel": (first_improvement_relabeling, "relabel"),
+        "best_relabel": (best_improvement_relabeling, "relabel")
+    }
+
+    if args.method == "all":
+        methods_to_run = operators.keys()
     else:
-        clf, _ = METHODS[method](
-            clf, valid, valid,
-            unprivileged_groups, privileged_groups,
-            hist, data_tuple, dataset_used, attr
-        )
+        methods_to_run = [args.method]
 
-    elapsed_time = time.time() - start_time
+    for method in methods_to_run:
+        current_clf = copy.deepcopy(clf)
+        current_hist = copy.deepcopy(hist)
 
-    # Escribir métricas
-    metrics_df = write_metrics(
-        clf, train, train, unprivileged_groups, privileged_groups,
-        test, test, valid, valid, method, hist, len(clf.tree_.children_left),
-        dataset_used, elapsed_time, attr, metrics_df, length_data
-    )
+        start_time = time.time()
 
-    # Guardar resultados
-    os.makedirs("Results", exist_ok=True)
-    metrics_df.to_excel(f"Results/metrics_{method}_{dataset_used}_{attr}.xlsx")
+        # Ejecutar método seleccionado
+        if method == "state_of_art":
+            current_clf, data_tuple = operators[method][0](
+                current_clf, 2500, len(current_clf.tree_.children_left), prune_count,
+                dataset_orig_valid, dataset_orig_valid_pred, unprivileged_groups,
+                privileged_groups, current_hist, data_tuple, dataset_used, attr
+            )
+        else:
+            current_clf, data_tuple = operators[method][0](
+                current_clf, dataset_orig_valid, dataset_orig_valid_pred,
+                unprivileged_groups, privileged_groups, current_hist,
+                data_tuple, dataset_used, attr, 0, None
+            )
+
+        elapsed_time = time.time() - start_time
+
+        # Escribir métricas (idéntico a approach_dt.py)
+        if operators[method][1] == "prune":
+            metrics_prune_df = write_metrics(
+                current_clf, dataset_orig_train, dataset_orig_train_pred,
+                unprivileged_groups, privileged_groups, dataset_orig_test,
+                dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred,
+                method, current_hist, len(current_clf.tree_.children_left),
+                dataset_used, elapsed_time, attr, metrics_prune_df, length_data
+            )
+        else:
+            metrics_relabeling_df = write_metrics(
+                current_clf, dataset_orig_train, dataset_orig_train_pred,
+                unprivileged_groups, privileged_groups, dataset_orig_test,
+                dataset_orig_test_pred, dataset_orig_valid, dataset_orig_valid_pred,
+                method, current_hist, len(current_clf.tree_.children_left),
+                dataset_used, elapsed_time, attr, metrics_relabeling_df, length_data
+            )
 
 
-# Lógica principal
+# =============================================================================
+# ----------------------- BUCLE PRINCIPAL (MODIFICADO) ------------------------
+# =============================================================================
+
 if __name__ == "__main__":
-    for dataset, attributes in DATASETS.items():
-        for attr in attributes:
-            print(f"Procesando: {dataset} - {attr}")
-            if args.method == "all":
-                for method_name in METHODS.keys():
-                    execute_method(dataset, attr, method_name)
-            else:
-                execute_method(dataset, attr, args.method)
+    for dataset_index, dataset_used in enumerate(datasets):
+        for attr in protected_attributes[dataset_index]:
+            print(f"Procesando: {dataset_used} - {attr}")
+            process_dataset(dataset_index, dataset_used, attr)
+
+    # Guardar resultados (igual que en approach_dt.py)
+    metrics_prune_df.to_excel(os.path.join("Results", "metrics_Prune_results.xlsx"))
+    metrics_relabeling_df.to_excel(os.path.join("Results", "metrics_Relabeling_results.xlsx"))
+
+    prueba_df, _ = data_tuple
+    prueba_df.to_excel(os.path.join("Results", "prueba.xlsx"))
+
+    grafic_df = table_align(data_tuple, first_fairness)
+    grafic_df.to_excel(os.path.join("Results", "grafic_metrics.xlsx"))
+
     print("Proceso completado!")
