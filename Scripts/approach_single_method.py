@@ -5,7 +5,6 @@ import time
 import numpy as np
 import pandas as pd
 
-from Scripts.approach_dt import prune_count
 from utility import get_data
 from sklearn import tree
 from funciones_dt_prune import (
