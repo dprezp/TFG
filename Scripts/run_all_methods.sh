@@ -7,7 +7,7 @@ METHODS=("state_of_art" "first_prune" "best_prune" "first_relabel" "best_relabel
 for METHOD in "${METHODS[@]}"
 do
   echo "▶️ Ejecutando método: $METHOD"
-  python approach_single_method.py --method $METHOD
+  python approach_dt.py --method $METHOD
   echo "✅ Finalizado: $METHOD"
 done
 
